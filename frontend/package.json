@@ -1,0 +1,32 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.3"
+  },
+  "dependencies": {
+    "@assistant-ui/react": "^0.12.21",
+    "@assistant-ui/react-lexical": "^0.0.3",
+    "@assistant-ui/react-streamdown": "^0.1.8",
+    "@lexical/react": "^0.42.0",
+    "@streamdown/code": "^1.1.1",
+    "@tailwindcss/vite": "^4.2.2",
+    "lexical": "^0.42.0",
+    "lucide-react": "^1.7.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.2",
+    "tldraw": "^4.5.4"
+  }
+}

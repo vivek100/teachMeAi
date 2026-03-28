@@ -1,0 +1,60 @@
+import type { BackendArtifactRecord } from '../runtime/types'
+
+export const mockArtifacts: BackendArtifactRecord[] = [
+  {
+    artifact_id: 'token_grid_basic',
+    family: 'token_grid',
+    version: 'v1',
+    title: 'Tokenization Grid',
+    description: 'Shows how text is split into tokens using BPE or similar tokenizers',
+    tags: ['token', 'bpe', 'tokenization', 'vocabulary', 'subword', 'text'],
+    parameters: {
+      name: { type: 'string', default: 'Tokenization' },
+    },
+    shape_template: [
+      { type: 'frame', x: 0, y: 0, props: { name: 'Tokenization', w: 800, h: 400 } },
+      { type: 'text', x: 20, y: 40, props: { text: 'Input: "understanding"', size: 'm', color: 'black' } },
+      { type: 'geo', x: 20, y: 100, props: { geo: 'rectangle', w: 120, h: 50, text: 'under', color: 'light-blue', fill: 'solid' } },
+      { type: 'geo', x: 160, y: 100, props: { geo: 'rectangle', w: 120, h: 50, text: 'stand', color: 'light-green', fill: 'solid' } },
+      { type: 'geo', x: 300, y: 100, props: { geo: 'rectangle', w: 100, h: 50, text: 'ing', color: 'light-violet', fill: 'solid' } },
+      { type: 'text', x: 20, y: 200, props: { text: 'Token IDs: [1834, 4411, 278]', size: 's', color: 'grey' } },
+    ],
+  },
+  {
+    artifact_id: 'attention_matrix_basic',
+    family: 'attention_matrix',
+    version: 'v1',
+    title: 'Attention Matrix',
+    description: 'Shows how self-attention computes relevance scores between tokens',
+    tags: ['attention', 'self-attention', 'matrix', 'transformer', 'score', 'heads'],
+    parameters: {},
+    shape_template: [
+      { type: 'frame', x: 0, y: 0, props: { name: 'Self-Attention', w: 700, h: 500 } },
+      { type: 'text', x: 150, y: 30, props: { text: 'Keys ->', size: 's', color: 'grey' } },
+      { type: 'text', x: 20, y: 150, props: { text: 'Queries\nv', size: 's', color: 'grey' } },
+      { type: 'geo', x: 100, y: 60, props: { geo: 'rectangle', w: 80, h: 80, text: '0.9', color: 'red', fill: 'solid' } },
+      { type: 'geo', x: 190, y: 60, props: { geo: 'rectangle', w: 80, h: 80, text: '0.05', color: 'light-blue', fill: 'solid' } },
+      { type: 'geo', x: 100, y: 150, props: { geo: 'rectangle', w: 80, h: 80, text: '0.1', color: 'light-blue', fill: 'solid' } },
+      { type: 'geo', x: 190, y: 150, props: { geo: 'rectangle', w: 80, h: 80, text: '0.8', color: 'orange', fill: 'solid' } },
+      { type: 'text', x: 100, y: 400, props: { text: 'Higher scores = more attention between tokens', size: 's', color: 'grey' } },
+    ],
+  },
+  {
+    artifact_id: 'embedding_space_basic',
+    family: 'embedding_space',
+    version: 'v1',
+    title: 'Embedding Space',
+    description: 'Visualizes semantically related words in a simple vector space',
+    tags: ['embedding', 'vector', 'space', 'semantic', 'similarity'],
+    parameters: {},
+    shape_template: [
+      { type: 'frame', x: 0, y: 0, props: { name: 'Embedding Space', w: 720, h: 420 } },
+      { type: 'text', x: 20, y: 24, props: { text: 'Words with similar meaning cluster together', size: 's', color: 'grey' } },
+      { type: 'geo', x: 140, y: 210, props: { geo: 'ellipse', w: 90, h: 50, text: 'cat', color: 'light-blue', fill: 'solid' } },
+      { type: 'geo', x: 220, y: 180, props: { geo: 'ellipse', w: 90, h: 50, text: 'dog', color: 'light-green', fill: 'solid' } },
+      { type: 'geo', x: 460, y: 110, props: { geo: 'ellipse', w: 110, h: 50, text: 'airplane', color: 'light-violet', fill: 'solid' } },
+      { type: 'line', x: 80, y: 320, props: { points: { a: { x: 0, y: 0 }, b: { x: 520, y: 0 } }, color: 'grey' } },
+      { type: 'line', x: 100, y: 60, props: { points: { a: { x: 0, y: 260 }, b: { x: 0, y: 0 } }, color: 'grey' } },
+    ],
+  },
+]

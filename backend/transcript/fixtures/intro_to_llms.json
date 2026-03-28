@@ -1,0 +1,26 @@
+[
+  "Alright everyone, welcome to today's lecture on large language models.",
+  "Let's start with the very basics. How does a computer understand text?",
+  "The first step is tokenization. We take a sentence and break it into smaller pieces called tokens.",
+  "For example the word understanding might be split into under, stand, and ing.",
+  "Each of these subword tokens gets mapped to a numerical ID from a vocabulary.",
+  "This is called byte pair encoding or BPE, one of the most common tokenization methods.",
+  "Now once we have tokens, we need to represent them as numbers the model can work with.",
+  "This is where embeddings come in. Each token gets mapped to a high-dimensional vector.",
+  "Words with similar meanings end up close together in this embedding space.",
+  "For instance, king and queen would be near each other, while king and bicycle would be far apart.",
+  "These embeddings are learned during training, not hand-coded.",
+  "Okay now let's talk about the core innovation. The transformer architecture.",
+  "The key mechanism is called self-attention.",
+  "Self-attention lets each token look at every other token in the sequence.",
+  "It computes attention scores, basically how much each token should pay attention to every other token.",
+  "You can think of it as a matrix where rows are queries and columns are keys.",
+  "High scores mean strong relationships between those tokens.",
+  "After attention, the output goes through a feed-forward network, then layer normalization.",
+  "This whole block repeats N times, that's what we call the transformer stack.",
+  "Now during training the model learns by minimizing a loss function.",
+  "The loss measures how wrong the model's predictions are.",
+  "Over many epochs of training, we watch the loss curve go down.",
+  "If training loss goes down but validation loss goes up, that's overfitting."
+]
+

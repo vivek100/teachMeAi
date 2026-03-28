@@ -1,0 +1,52 @@
+{
+  "artifact_id": "attention_matrix_basic",
+  "family": "attention_matrix",
+  "version": "v1",
+  "title": "Attention Matrix",
+  "description": "Shows how self-attention computes relevance scores between tokens",
+  "tags": ["attention", "self-attention", "matrix", "transformer", "score", "heads"],
+  "parameters": {},
+  "shape_template": [
+    {
+      "type": "frame",
+      "x": 0, "y": 0,
+      "props": { "name": "Self-Attention", "w": 700, "h": 500 }
+    },
+    {
+      "type": "text",
+      "x": 150, "y": 30,
+      "props": { "text": "Keys →", "size": "s", "color": "grey" }
+    },
+    {
+      "type": "text",
+      "x": 20, "y": 150,
+      "props": { "text": "Queries\n↓", "size": "s", "color": "grey" }
+    },
+    {
+      "type": "geo",
+      "x": 100, "y": 60,
+      "props": { "geo": "rectangle", "w": 80, "h": 80, "text": "0.9", "color": "red", "fill": "solid" }
+    },
+    {
+      "type": "geo",
+      "x": 190, "y": 60,
+      "props": { "geo": "rectangle", "w": 80, "h": 80, "text": "0.05", "color": "light-blue", "fill": "solid" }
+    },
+    {
+      "type": "geo",
+      "x": 100, "y": 150,
+      "props": { "geo": "rectangle", "w": 80, "h": 80, "text": "0.1", "color": "light-blue", "fill": "solid" }
+    },
+    {
+      "type": "geo",
+      "x": 190, "y": 150,
+      "props": { "geo": "rectangle", "w": 80, "h": 80, "text": "0.8", "color": "orange", "fill": "solid" }
+    },
+    {
+      "type": "text",
+      "x": 100, "y": 400,
+      "props": { "text": "Higher scores = more attention between tokens", "size": "s", "color": "grey" }
+    }
+  ]
+}
+

@@ -1,0 +1,57 @@
+{
+  "artifact_id": "embedding_space_basic",
+  "family": "embedding_space",
+  "version": "v1",
+  "title": "Embedding Space Visualization",
+  "description": "Shows how words map to vectors in a high-dimensional embedding space",
+  "tags": ["embedding", "vector", "word2vec", "representation", "space", "dimension"],
+  "parameters": {},
+  "shape_template": [
+    {
+      "type": "frame",
+      "x": 0, "y": 0,
+      "props": { "name": "Embedding Space", "w": 800, "h": 500 }
+    },
+    {
+      "type": "geo",
+      "x": 40, "y": 60,
+      "props": { "geo": "ellipse", "w": 700, "h": 400, "color": "light-blue", "fill": "semi", "dash": "dashed" }
+    },
+    {
+      "type": "geo",
+      "x": 150, "y": 150,
+      "props": { "geo": "ellipse", "w": 16, "h": 16, "color": "blue", "fill": "solid" }
+    },
+    {
+      "type": "text",
+      "x": 170, "y": 142,
+      "props": { "text": "king", "size": "s", "color": "blue" }
+    },
+    {
+      "type": "geo",
+      "x": 200, "y": 180,
+      "props": { "geo": "ellipse", "w": 16, "h": 16, "color": "blue", "fill": "solid" }
+    },
+    {
+      "type": "text",
+      "x": 220, "y": 172,
+      "props": { "text": "queen", "size": "s", "color": "blue" }
+    },
+    {
+      "type": "arrow",
+      "x": 158, "y": 158,
+      "props": {
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 50, "y": 30 },
+        "color": "red",
+        "dash": "dashed"
+      }
+    },
+    {
+      "type": "text",
+      "x": 300, "y": 380,
+      "props": { "text": "Similar words cluster together", "size": "s", "color": "grey" }
+    }
+  ]
+}
+

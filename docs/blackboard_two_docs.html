@@ -1,0 +1,138 @@
+<style>
+.docs-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px;line-height:1.5}
+.doc-card{border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.doc-header{padding:10px 14px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:8px}
+.doc-title{font-weight:500;font-size:14px;color:var(--color-text-primary)}
+.doc-subtitle{font-size:11px;color:var(--color-text-tertiary)}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.pill-purple{background:#EEEDFE;color:#3C3489}
+.pill-teal{background:#E1F5EE;color:#085041}
+.pill-amber{background:#FAEEDA;color:#633806}
+.pill-red{background:#FCEBEB;color:#791F1F}
+.pill-green{background:#EAF3DE;color:#27500A}
+.pill-gray{background:#F1EFE8;color:#444441}
+@media(prefers-color-scheme:dark){
+.pill-purple{background:#3C3489;color:#CECBF6}
+.pill-teal{background:#085041;color:#9FE1CB}
+.pill-amber{background:#633806;color:#FAC775}
+.pill-red{background:#791F1F;color:#F7C1C1}
+.pill-green{background:#27500A;color:#C0DD97}
+.pill-gray{background:#444441;color:#D3D1C7}}
+.doc-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.chunk{padding:6px 10px;border-radius:6px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.chunk.processed{opacity:.45}
+.chunk.cursor{border-color:#7F77DD;background:#EEEDFE}
+@media(prefers-color-scheme:dark){.chunk.cursor{border-color:#534AB7;background:#26215C}}
+.chunk-meta{font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px}
+.chunk-text{color:var(--color-text-primary)}
+.cursor-label{font-size:10px;color:#534AB7;font-weight:500;text-align:right;margin-top:2px}
+@media(prefers-color-scheme:dark){.cursor-label{color:#AFA9EC}}
+.region-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.region-name{font-weight:500;color:var(--color-text-primary);min-width:120px;font-size:12px}
+.region-detail{font-size:11px;color:var(--color-text-secondary);flex:1}
+.camera-row{padding:8px 10px;border-radius:6px;border:1px solid var(--color-border-secondary);background:var(--color-background-secondary);display:flex;align-items:center;gap:10px}
+.camera-label{font-size:11px;font-weight:500;color:var(--color-text-secondary)}
+.section-label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+</style>
+<div class="docs-wrap">
+<div class="doc-card">
+  <div class="doc-header">
+    <div>
+      <div class="doc-title">Transcript journal</div>
+      <div class="doc-subtitle">append-only  ·  orchestrator reads from cursor</div>
+    </div>
+  </div>
+  <div class="doc-body">
+    <div class="section-label">processed (prunable)</div>
+    <div class="chunk processed">
+      <div class="chunk-meta">T=0:00</div>
+      <div class="chunk-text">"today we're going to talk about how LLMs work..."</div>
+    </div>
+    <div class="chunk processed">
+      <div class="chunk-meta">T=0:18</div>
+      <div class="chunk-text">"let's start with how text becomes tokens..."</div>
+    </div>
+    <div class="chunk processed">
+      <div class="chunk-meta">T=0:44</div>
+      <div class="chunk-text">"BPE, byte pair encoding, merges common pairs..."</div>
+    </div>
+    <div class="chunk processed">
+      <div class="chunk-meta">T=1:02</div>
+      <div class="chunk-text">"so 'hello world' becomes these four token IDs..."</div>
+    </div>
+    <div class="section-label">active window (in context)</div>
+    <div class="chunk cursor">
+      <div class="chunk-meta">T=1:28  ← cursor</div>
+      <div class="chunk-text">"now each token gets mapped to a high-dimensional vector"</div>
+      <div class="cursor-label">orchestrator reading from here</div>
+    </div>
+    <div class="chunk">
+      <div class="chunk-meta">T=1:41</div>
+      <div class="chunk-text">"this vector lives in a 512-dimensional space..."</div>
+    </div>
+    <div class="chunk">
+      <div class="chunk-meta">T=1:55  ← latest</div>
+      <div class="chunk-text">"similar tokens end up close together in that space"</div>
+    </div>
+  </div>
+</div>
+<div class="doc-card">
+  <div class="doc-header">
+    <div>
+      <div class="doc-title">Canvas state doc</div>
+      <div class="doc-subtitle">live  ·  all agents read and write</div>
+    </div>
+  </div>
+  <div class="doc-body">
+    <div class="section-label">camera</div>
+    <div class="camera-row">
+      <span class="camera-label">current region</span>
+      <span class="pill pill-teal">embedding_zone</span>
+      <span class="camera-label">zoom</span>
+      <span style="font-size:12px;color:var(--color-text-primary)">0.8</span>
+      <span class="camera-label">lock</span>
+      <span class="pill pill-gray">free</span>
+    </div>
+    <div class="section-label">regions</div>
+    <div class="region-row">
+      <span class="region-name">intro_overview</span>
+      <span class="pill pill-green">complete</span>
+      <span class="region-detail">3 shapes</span>
+    </div>
+    <div class="region-row">
+      <span class="region-name">tokenisation_zone</span>
+      <span class="pill pill-green">complete</span>
+      <span class="region-detail">7 shapes · BPE grid placed</span>
+    </div>
+    <div class="region-row" style="border-color:#1D9E75">
+      <span class="region-name">embedding_zone</span>
+      <span class="pill pill-amber">locked</span>
+      <span class="region-detail">worker_003 · drawing scatter plot</span>
+    </div>
+    <div class="region-row">
+      <span class="region-name">attention_zone</span>
+      <span class="pill pill-gray">idle</span>
+      <span class="region-detail">0 shapes</span>
+    </div>
+    <div class="region-row">
+      <span class="region-name">transformer_zone</span>
+      <span class="pill pill-gray">idle</span>
+      <span class="region-detail">0 shapes</span>
+    </div>
+    <div class="section-label">active workers</div>
+    <div class="region-row" style="border-color:#1D9E75">
+      <span class="pill pill-teal">worker_003</span>
+      <span class="region-detail">embedding_zone · "draw embedding space scatter" · 8s</span>
+    </div>
+    <div class="section-label">recently done</div>
+    <div class="region-row">
+      <span class="pill pill-gray">worker_001</span>
+      <span class="region-detail">tokenisation_zone · BPE grid + token IDs · done</span>
+    </div>
+    <div class="region-row">
+      <span class="pill pill-gray">worker_002</span>
+      <span class="region-detail">tokenisation_zone · vocab size annotation · done</span>
+    </div>
+  </div>
+</div>
+</div>

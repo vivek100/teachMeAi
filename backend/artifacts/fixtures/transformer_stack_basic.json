@@ -1,0 +1,74 @@
+{
+  "artifact_id": "transformer_stack_basic",
+  "family": "transformer_stack",
+  "version": "v1",
+  "title": "Transformer Architecture Stack",
+  "description": "Shows the layer stack of a transformer model with encoder and decoder blocks",
+  "tags": ["transformer", "encoder", "decoder", "layer", "architecture", "model", "stack", "block"],
+  "parameters": {},
+  "shape_template": [
+    {
+      "type": "frame",
+      "x": 0, "y": 0,
+      "props": { "name": "Transformer", "w": 600, "h": 600 }
+    },
+    {
+      "type": "geo",
+      "x": 50, "y": 450,
+      "props": { "geo": "rectangle", "w": 200, "h": 60, "text": "Input Embedding", "color": "light-green", "fill": "solid" }
+    },
+    {
+      "type": "geo",
+      "x": 50, "y": 350,
+      "props": { "geo": "rectangle", "w": 200, "h": 60, "text": "Self-Attention", "color": "yellow", "fill": "solid" }
+    },
+    {
+      "type": "geo",
+      "x": 50, "y": 250,
+      "props": { "geo": "rectangle", "w": 200, "h": 60, "text": "Feed Forward", "color": "light-blue", "fill": "solid" }
+    },
+    {
+      "type": "geo",
+      "x": 50, "y": 150,
+      "props": { "geo": "rectangle", "w": 200, "h": 60, "text": "Layer Norm", "color": "light-violet", "fill": "solid" }
+    },
+    {
+      "type": "text",
+      "x": 50, "y": 80,
+      "props": { "text": "× N layers", "size": "s", "color": "grey" }
+    },
+    {
+      "type": "arrow",
+      "x": 150, "y": 450,
+      "props": {
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 0, "y": -80 },
+        "color": "black"
+      }
+    },
+    {
+      "type": "arrow",
+      "x": 150, "y": 350,
+      "props": {
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 0, "y": -80 },
+        "color": "black"
+      }
+    },
+    {
+      "type": "arrow",
+      "x": 150, "y": 250,
+      "props": {
+        "start": { "x": 0, "y": 0 },
+        "end": { "x": 0, "y": -80 },
+        "color": "black"
+      }
+    },
+    {
+      "type": "geo",
+      "x": 50, "y": 30,
+      "props": { "geo": "rectangle", "w": 200, "h": 40, "text": "Output", "color": "orange", "fill": "solid" }
+    }
+  ]
+}
+
