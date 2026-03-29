@@ -29,7 +29,7 @@ Set-Location '$repoRoot'
 
 $frontendCommand = @"
 Set-Location '$frontendDir'
-& npm.cmd run dev -- --host $FrontendHost --port $FrontendPort
+& npm.cmd run dev -- --host=$FrontendHost --port=$FrontendPort
 "@
 
 Write-Host "Starting TeachWithMeAI backend on http://$BackendHost`:$BackendPort" -ForegroundColor Cyan

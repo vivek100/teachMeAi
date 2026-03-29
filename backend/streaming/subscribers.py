@@ -6,6 +6,7 @@ import json
 import sys
 
 from backend.domain.models import BackendEvent
+from backend.domain.state import SessionStore
 
 
 class ConsoleSubscriber:
@@ -35,3 +36,19 @@ class RecorderSubscriber:
     def kinds(self) -> list[str]:
         return [e.kind for e in self.events]
 
+
+class SessionStoreSubscriber:
+    """Persists published events onto SessionState for API reads / snapshots."""
+
+    def __init__(self, store: SessionStore, max_events: int = 200) -> None:
+        self._store = store
+        self._max_events = max_events
+
+    async def __call__(self, event: BackendEvent) -> None:
+        state = self._store.get(event.session_id)
+        if state is None:
+            return
+
+        state.emitted_events.append(event)
+        if len(state.emitted_events) > self._max_events:
+            state.emitted_events = state.emitted_events[-self._max_events :]

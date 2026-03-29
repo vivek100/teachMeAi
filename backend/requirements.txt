@@ -1,0 +1,8 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.34,<1.0
+pydantic>=2.10,<3.0
+python-dotenv>=1.0,<2.0
+railtracks>=0.1
+litellm>=1.60
+openai>=1.70
+websockets>=15.0

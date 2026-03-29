@@ -13,24 +13,32 @@ from backend.api.routes import init_routes, router
 from backend.artifacts.registry import ArtifactRegistry
 from backend.artifacts.resolver import ArtifactResolver
 from backend.domain.state import SessionStore
+from backend.logging_utils import configure_logging, get_logger
 from backend.orchestration.service import OrchestrationService
 from backend.streaming.publisher import EventPublisher
-from backend.streaming.subscribers import ConsoleSubscriber
+from backend.streaming.subscribers import ConsoleSubscriber, SessionStoreSubscriber
+from backend.streaming.ws import SessionStreamHub
 from backend.transcript.ingest import ChunkIngestor
 from backend.transcript.windowing import WindowBuilder
+
+logger = get_logger("app")
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     _load_environment()
+    configure_logging()
 
     app = FastAPI(title="TeachWithMeAI", version="0.1.0")
     _configure_cors(app)
 
     publisher = EventPublisher()
-    publisher.subscribe(ConsoleSubscriber())
-
     store = SessionStore()
+    stream_hub = SessionStreamHub()
+
+    publisher.subscribe(ConsoleSubscriber())
+    publisher.subscribe(SessionStoreSubscriber(store))
+    publisher.subscribe(stream_hub)
 
     ingestor = ChunkIngestor(publisher)
     windower = WindowBuilder(publisher, window_size=6, min_new_chunks=3)
@@ -54,9 +62,16 @@ def create_app() -> FastAPI:
         "orchestration": orchestration,
         "registry": registry,
         "publisher": publisher,
+        "stream_hub": stream_hub,
     }
     init_routes(store, deps)
     app.include_router(router)
+
+    logger.info(
+        "application initialized | registry_count=%s | llm_configured=%s",
+        len(registry.list_all()),
+        llm is not None,
+    )
 
     return app
 
@@ -110,7 +125,7 @@ def _get_llm():
     except ImportError:
         pass
 
-    print("Warning: no LLM configured. Set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY.")
+    logger.warning("no LLM configured")
     return None
 
 

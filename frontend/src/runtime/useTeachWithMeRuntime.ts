@@ -5,10 +5,10 @@ import {
   type AppendMessage,
   type ThreadMessageLike,
 } from '@assistant-ui/react'
-import { mockArtifacts } from '../demo/mock-artifacts'
-import { createSession, getArtifacts, getBatches, getEvents, sendChunk } from './api-client'
+import { createSession, getBatches, getEvents, getSessionWebSocketUrl, sendChunk } from './api-client'
+import { runtimeDebug } from './debug'
 import { adaptBackendEvent, adaptBatch } from './event-adapter'
-import type { BackendArtifactRecord, CanvasBatch, FrontendRuntimeEvent } from './types'
+import type { BackendBatchRecord, BackendEventRecord, BackendStreamMessage, CanvasBatch, FrontendRuntimeEvent } from './types'
 
 function createUserMessage(text: string): ThreadMessageLike {
   return {
@@ -23,16 +23,6 @@ function createUserMessage(text: string): ThreadMessageLike {
   }
 }
 
-const DEMO_MODE = (import.meta.env.VITE_RUNTIME_MODE ?? 'demo') === 'demo'
-
-const DEMO_SUMMARIES = [
-  'I detected a tokenization explanation, so I am placing a token grid to anchor the vocabulary discussion.',
-  'This turn sounds like an embedding explanation, so I am rendering a spatial artifact for vector intuition.',
-  'This turn maps well to self-attention, so I am placing an attention matrix artifact on the board.',
-  'This sounds like transformer architecture, so I am adding a stack overview artifact for the next segment.',
-  'This sounds like training dynamics, so I am drawing a loss curve artifact to support the explanation.',
-]
-
 export function useTeachWithMeRuntime() {
   const [messages, setMessages] = useState<readonly ThreadMessageLike[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -40,37 +30,14 @@ export function useTeachWithMeRuntime() {
   const [backendStatus, setBackendStatus] = useState('Waiting for first session')
   const [error, setError] = useState<string | null>(null)
   const [canvasBatches, setCanvasBatches] = useState<readonly CanvasBatch[]>([])
-  const [demoArtifacts, setDemoArtifacts] = useState<BackendArtifactRecord[]>(mockArtifacts)
 
   const seenEventIds = useRef<Set<string>>(new Set())
   const seenBatchIds = useRef<Set<string>>(new Set())
   const isSendingRef = useRef(false)
-  const demoTurnRef = useRef(0)
-
-  useEffect(() => {
-    if (!DEMO_MODE) return
-    let cancelled = false
-
-    const loadArtifacts = async () => {
-      try {
-        const artifacts = await getArtifacts()
-        if (!cancelled) setDemoArtifacts(artifacts.length > 0 ? artifacts : mockArtifacts)
-      } catch (err) {
-        if (!cancelled) {
-          setDemoArtifacts(mockArtifacts)
-          setBackendStatus('Using fallback demo artifacts')
-        }
-      }
-    }
-
-    loadArtifacts()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const ensureSession = useCallback(async () => {
     if (sessionId) return sessionId
+    runtimeDebug.info('runtime', 'ensuring session')
     const created = await createSession()
     setSessionId(created.session_id)
     setBackendStatus(`Session created: ${created.session_id}`)
@@ -78,6 +45,7 @@ export function useTeachWithMeRuntime() {
   }, [sessionId])
 
   const applyRuntimeEvent = useCallback((event: FrontendRuntimeEvent) => {
+    runtimeDebug.debug('runtime', 'applying frontend event', { type: event.type })
     if (event.type === 'status') {
       setBackendStatus(event.message)
       return
@@ -158,81 +126,60 @@ export function useTeachWithMeRuntime() {
     }
   }, [])
 
+  const ingestBackendEvent = useCallback(
+    (event: BackendEventRecord) => {
+      if (seenEventIds.current.has(event.event_id)) return
+      seenEventIds.current.add(event.event_id)
+      runtimeDebug.info('stream', 'backend event received', {
+        eventId: event.event_id,
+        kind: event.kind,
+      })
+
+      const adapted = adaptBackendEvent(event)
+      adapted.forEach(applyRuntimeEvent)
+
+      if (event.kind !== 'op_batch_ready') return
+      const maybeBatch = event.payload.batch
+      if (!maybeBatch || typeof maybeBatch !== 'object') return
+
+      const batch = maybeBatch as BackendBatchRecord
+      if (seenBatchIds.current.has(batch.batch_id)) return
+      seenBatchIds.current.add(batch.batch_id)
+      runtimeDebug.info('stream', 'embedded batch received', {
+        batchId: batch.batch_id,
+        artifactId: batch.artifact_id,
+        opCount: batch.ops.length,
+      })
+      setCanvasBatches((current) => [...current, adaptBatch(batch)])
+    },
+    [applyRuntimeEvent],
+  )
+
+  const ingestBackendBatch = useCallback((batch: BackendBatchRecord) => {
+    if (seenBatchIds.current.has(batch.batch_id)) return
+    seenBatchIds.current.add(batch.batch_id)
+    runtimeDebug.info('stream', 'batch received', {
+      batchId: batch.batch_id,
+      artifactId: batch.artifact_id,
+      opCount: batch.ops.length,
+    })
+    setCanvasBatches((current) => [...current, adaptBatch(batch)])
+  }, [])
+
   const submitTranscriptChunk = useCallback(
     async (rawText: string) => {
       const text = rawText.trim()
       if (!text) return
       if (isSendingRef.current) return
+      runtimeDebug.info('runtime', 'submitting transcript chunk', { textLength: text.length })
 
       isSendingRef.current = true
       setError(null)
       setMessages((current) => [...current, createUserMessage(text)])
       setIsRunning(true)
-      setBackendStatus(DEMO_MODE ? 'Running frontend demo turn' : 'Sending transcript chunk to backend')
+      setBackendStatus('Sending transcript chunk to backend')
 
       try {
-        if (DEMO_MODE) {
-          const turnIndex = demoTurnRef.current++
-          const availableArtifacts = demoArtifacts.length > 0 ? demoArtifacts : mockArtifacts
-          const artifact = availableArtifacts[turnIndex % availableArtifacts.length]
-          const summary = DEMO_SUMMARIES[turnIndex % DEMO_SUMMARIES.length]
-          const messageId = `demo-asst-${turnIndex}`
-
-          setMessages((current) => [
-            ...current,
-            {
-              id: messageId,
-              role: 'assistant',
-              createdAt: new Date(),
-              content: [{ type: 'text', text: summary }],
-              status: { type: 'complete', reason: 'stop' },
-              metadata: {
-                unstable_state: null,
-                unstable_annotations: [],
-                unstable_data: [],
-                steps: [],
-                custom: {},
-              },
-            },
-          ])
-
-          if (artifact) {
-            const demoBatch = createDemoBatch(artifact, turnIndex)
-            console.debug('TeachWithMeAI runtime: created demo batch', demoBatch)
-            setMessages((current) => [
-              ...current,
-              {
-                id: `demo-tool-${turnIndex}`,
-                role: 'assistant',
-                createdAt: new Date(),
-                content: [
-                  {
-                    type: 'tool-call',
-                    toolCallId: `demo-tool-${turnIndex}`,
-                    toolName: 'instantiate_artifact',
-                    args: { artifactId: artifact.artifact_id, family: artifact.family },
-                    result: { title: artifact.title, shapes: artifact.shape_template.length },
-                  },
-                ],
-                status: { type: 'complete', reason: 'stop' },
-                metadata: {
-                  unstable_state: null,
-                  unstable_annotations: [],
-                  unstable_data: [],
-                  steps: [],
-                  custom: {},
-                },
-              },
-            ])
-
-            setCanvasBatches((current) => [...current, demoBatch])
-          }
-
-          setBackendStatus(artifact ? `Demo rendered: ${artifact.title}` : 'Demo turn completed')
-          setIsRunning(false)
-          return
-        }
-
         const ensuredSessionId = await ensureSession()
         const result = await sendChunk(ensuredSessionId, text)
         if (!result.window_triggered) {
@@ -243,6 +190,7 @@ export function useTeachWithMeRuntime() {
         }
       } catch (err) {
         const messageText = err instanceof Error ? err.message : 'Failed to send transcript chunk'
+        runtimeDebug.error('runtime', 'submit failed', { message: messageText })
         setError(messageText)
         setBackendStatus('Request failed')
         setIsRunning(false)
@@ -250,7 +198,7 @@ export function useTeachWithMeRuntime() {
         isSendingRef.current = false
       }
     },
-    [demoArtifacts, ensureSession],
+    [ensureSession],
   )
 
   const onNew = useCallback(
@@ -275,39 +223,80 @@ export function useTeachWithMeRuntime() {
 
     let stopped = false
 
-    const poll = async () => {
+    const hydrateFromHttp = async () => {
       try {
+        runtimeDebug.info('stream', 'hydrating session from http', { sessionId })
         const [events, batches] = await Promise.all([getEvents(sessionId), getBatches(sessionId)])
-
         if (stopped) return
-
-        for (const event of events) {
-          if (seenEventIds.current.has(event.event_id)) continue
-          seenEventIds.current.add(event.event_id)
-          const adapted = adaptBackendEvent(event)
-          adapted.forEach(applyRuntimeEvent)
-        }
-
-        for (const batch of batches) {
-          if (seenBatchIds.current.has(batch.batch_id)) continue
-          seenBatchIds.current.add(batch.batch_id)
-          setCanvasBatches((current) => [...current, adaptBatch(batch)])
-        }
+        events.forEach(ingestBackendEvent)
+        batches.forEach(ingestBackendBatch)
       } catch (err) {
         if (stopped) return
-        const messageText = err instanceof Error ? err.message : 'Polling failed'
+        const messageText = err instanceof Error ? err.message : 'Initial sync failed'
+        runtimeDebug.error('stream', 'initial sync failed', { message: messageText })
         setError(messageText)
-        setBackendStatus('Backend polling failed')
+        setBackendStatus('Initial sync failed')
       }
     }
 
-    poll()
-    const handle = window.setInterval(poll, 1500)
+    hydrateFromHttp()
+
+    const websocket = new WebSocket(getSessionWebSocketUrl(sessionId))
+    runtimeDebug.info('stream', 'opening websocket', {
+      sessionId,
+      url: getSessionWebSocketUrl(sessionId),
+    })
+
+    websocket.onopen = () => {
+      if (stopped) return
+      runtimeDebug.info('stream', 'websocket open', { sessionId })
+      setBackendStatus('Live stream connected')
+    }
+
+    websocket.onmessage = (messageEvent) => {
+      if (stopped) return
+
+      let payload: BackendStreamMessage
+      try {
+        payload = JSON.parse(messageEvent.data) as BackendStreamMessage
+      } catch {
+        runtimeDebug.warn('stream', 'failed to parse websocket payload')
+        return
+      }
+
+      if (payload.type === 'snapshot') {
+        runtimeDebug.info('stream', 'websocket snapshot received', {
+          sessionId,
+          eventCount: payload.events.length,
+          batchCount: payload.batches.length,
+        })
+        payload.events.forEach(ingestBackendEvent)
+        payload.batches.forEach(ingestBackendBatch)
+        return
+      }
+
+      if (payload.type === 'event') {
+        ingestBackendEvent(payload.event)
+      }
+    }
+
+    websocket.onerror = () => {
+      if (stopped) return
+      runtimeDebug.error('stream', 'websocket error', { sessionId })
+      setBackendStatus('Live stream error, using HTTP sync')
+    }
+
+    websocket.onclose = () => {
+      if (stopped) return
+      runtimeDebug.warn('stream', 'websocket closed', { sessionId })
+      setBackendStatus('Live stream disconnected')
+    }
+
     return () => {
       stopped = true
-      window.clearInterval(handle)
+      websocket.close()
     }
-  }, [applyRuntimeEvent, sessionId])
+  }, [ingestBackendBatch, ingestBackendEvent, sessionId])
 
   const runtime = useExternalStoreRuntime({
     messages,
@@ -337,202 +326,4 @@ export function useTeachWithMeRuntime() {
     }),
     [runtime, sessionId, isRunning, backendStatus, error, canvasBatches, markBatchApplied, submitTranscriptChunk],
   )
-}
-
-function createDemoBatch(artifact: BackendArtifactRecord, turnIndex: number): CanvasBatch {
-  const offsetX = 40 + (turnIndex % 3) * 30
-  const offsetY = 40 + (turnIndex % 2) * 24
-  const batchId = `demo-batch-${turnIndex}`
-
-  return {
-    batchId,
-    artifactId: artifact.artifact_id,
-    ops: [
-      {
-        opType: 'set_camera',
-        camera: { x: 0, y: 0, z: 1 },
-      },
-      ...buildGuaranteedDemoShapes(artifact, turnIndex, offsetX, offsetY).map((shape) => ({
-        opType: 'create_shape',
-        shape,
-      })),
-    ],
-  }
-}
-
-function buildGuaranteedDemoShapes(
-  artifact: BackendArtifactRecord,
-  turnIndex: number,
-  offsetX: number,
-  offsetY: number,
-) {
-  const title = artifact.title || artifact.artifact_id
-  const family = artifact.family
-  const ids = {
-    frame: `shape:${artifact.artifact_id}:${turnIndex}:frame`,
-    title: `shape:${artifact.artifact_id}:${turnIndex}:title`,
-    subtitle: `shape:${artifact.artifact_id}:${turnIndex}:subtitle`,
-    cardA: `shape:${artifact.artifact_id}:${turnIndex}:a`,
-    cardB: `shape:${artifact.artifact_id}:${turnIndex}:b`,
-    cardC: `shape:${artifact.artifact_id}:${turnIndex}:c`,
-  }
-
-  return [
-    {
-      id: ids.frame,
-      typeName: 'shape',
-      type: 'frame',
-      x: 120 + offsetX,
-      y: 80 + offsetY,
-      rotation: 0,
-      isLocked: false,
-      opacity: 1,
-      parentId: 'page:page',
-      index: `a${turnIndex}0`,
-      props: {
-        name: title,
-        w: 640,
-        h: 360,
-      },
-      meta: {},
-    },
-    {
-      id: ids.title,
-      typeName: 'shape',
-      type: 'text',
-      x: 150 + offsetX,
-      y: 120 + offsetY,
-      rotation: 0,
-      isLocked: false,
-      opacity: 1,
-      parentId: 'page:page',
-      index: `a${turnIndex}1`,
-      props: {
-        richText: toRichText(title),
-        color: 'black',
-        size: 'l',
-        scale: 1,
-        autoSize: true,
-        textAlign: 'start',
-      },
-      meta: {},
-    },
-    {
-      id: ids.subtitle,
-      typeName: 'shape',
-      type: 'text',
-      x: 150 + offsetX,
-      y: 165 + offsetY,
-      rotation: 0,
-      isLocked: false,
-      opacity: 1,
-      parentId: 'page:page',
-      index: `a${turnIndex}2`,
-      props: {
-        richText: toRichText(`Artifact family: ${family}`),
-        color: 'grey',
-        size: 's',
-        scale: 1,
-        autoSize: true,
-        textAlign: 'start',
-      },
-      meta: {},
-    },
-    {
-      id: ids.cardA,
-      typeName: 'shape',
-      type: 'geo',
-      x: 150 + offsetX,
-      y: 230 + offsetY,
-      rotation: 0,
-      isLocked: false,
-      opacity: 1,
-      parentId: 'page:page',
-      index: `a${turnIndex}3`,
-      props: {
-        geo: 'rectangle',
-        w: 140,
-        h: 70,
-        color: 'blue',
-        fill: 'solid',
-        dash: 'draw',
-        size: 'm',
-        text: 'Concept',
-        align: 'middle',
-        verticalAlign: 'middle',
-        font: 'draw',
-        growY: 0,
-        url: '',
-      },
-      meta: {},
-    },
-    {
-      id: ids.cardB,
-      typeName: 'shape',
-      type: 'geo',
-      x: 320 + offsetX,
-      y: 230 + offsetY,
-      rotation: 0,
-      isLocked: false,
-      opacity: 1,
-      parentId: 'page:page',
-      index: `a${turnIndex}4`,
-      props: {
-        geo: 'rectangle',
-        w: 140,
-        h: 70,
-        color: 'green',
-        fill: 'solid',
-        dash: 'draw',
-        size: 'm',
-        text: 'Visual',
-        align: 'middle',
-        verticalAlign: 'middle',
-        font: 'draw',
-        growY: 0,
-        url: '',
-      },
-      meta: {},
-    },
-    {
-      id: ids.cardC,
-      typeName: 'shape',
-      type: 'geo',
-      x: 490 + offsetX,
-      y: 230 + offsetY,
-      rotation: 0,
-      isLocked: false,
-      opacity: 1,
-      parentId: 'page:page',
-      index: `a${turnIndex}5`,
-      props: {
-        geo: 'rectangle',
-        w: 140,
-        h: 70,
-        color: 'violet',
-        fill: 'solid',
-        dash: 'draw',
-        size: 'm',
-        text: 'Notes',
-        align: 'middle',
-        verticalAlign: 'middle',
-        font: 'draw',
-        growY: 0,
-        url: '',
-      },
-      meta: {},
-    },
-  ]
-}
-
-function toRichText(text: string) {
-  return {
-    type: 'doc',
-    content: [
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text }],
-      },
-    ],
-  }
 }

@@ -14,6 +14,7 @@ from backend.domain.models import (
     TranscriptWindow,
 )
 from backend.domain.state import SessionState
+from backend.logging_utils import get_logger
 from backend.orchestration.prompts import (
     FAMILY_HIERARCHY,
     ORCHESTRATOR_SYSTEM_PROMPT,
@@ -22,6 +23,7 @@ from backend.orchestration.prompts import (
 from backend.orchestration.tools import create_tools
 from backend.streaming.publisher import EventPublisher
 
+logger = get_logger("orchestration.service")
 
 class OrchestrationService:
     """Runs the orchestrator agent on a transcript window and resolves artifacts."""
@@ -114,6 +116,14 @@ class OrchestrationService:
 
         result = await rt.call(agent, user_prompt)
         decision: OrchestratorDecision = result.structured
+        logger.info(
+            "decision produced | session_id=%s | intent=%s | topic=%s | artifact_query=%s | confidence=%s",
+            state.session_id,
+            decision.intent,
+            decision.topic,
+            decision.artifact_query,
+            decision.confidence,
+        )
 
         # Record decision
         state.recent_decisions.append(decision)
@@ -135,6 +145,13 @@ class OrchestrationService:
                 decision, state.session_id, drawn_artifacts=state.drawn_artifacts
             )
             if batch:
+                logger.info(
+                    "artifact batch ready | session_id=%s | batch_id=%s | artifact_id=%s | op_count=%s",
+                    state.session_id,
+                    batch.batch_id,
+                    batch.artifact_id,
+                    len(batch.ops),
+                )
                 state.pending_batches.append(batch)
                 # Track what's on canvas for dedup
                 state.drawn_artifacts.append({
@@ -149,6 +166,7 @@ class OrchestrationService:
                         "batch_id": batch.batch_id,
                         "op_count": len(batch.ops),
                         "artifact_id": batch.artifact_id,
+                        "batch": batch.model_dump(mode="json"),
                     },
                 ))
             return batch
@@ -157,6 +175,12 @@ class OrchestrationService:
         if decision.intent == "annotate":
             batch = await self._annotator.annotate(decision, state)
             if batch:
+                logger.info(
+                    "annotation batch ready | session_id=%s | batch_id=%s | op_count=%s",
+                    state.session_id,
+                    batch.batch_id,
+                    len(batch.ops),
+                )
                 state.pending_batches.append(batch)
                 await self._publisher.publish(BackendEvent(
                     session_id=state.session_id,
@@ -165,6 +189,7 @@ class OrchestrationService:
                         "batch_id": batch.batch_id,
                         "op_count": len(batch.ops),
                         "artifact_id": batch.artifact_id,
+                        "batch": batch.model_dump(mode="json"),
                     },
                 ))
             return batch
@@ -179,4 +204,3 @@ class OrchestrationService:
         # Fallback: derive family from artifact_id (e.g. "token_grid_basic" → "token_grid")
         parts = artifact_id.rsplit("_", 1)
         return parts[0] if len(parts) > 1 else artifact_id
-

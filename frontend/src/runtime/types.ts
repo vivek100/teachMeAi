@@ -16,6 +16,19 @@ export type BackendBatchRecord = {
   source: string
 }
 
+export type BackendStreamMessage =
+  | {
+      type: 'snapshot'
+      session_id: string
+      events: BackendEventRecord[]
+      batches: BackendBatchRecord[]
+    }
+  | {
+      type: 'event'
+      session_id: string
+      event: BackendEventRecord
+    }
+
 export type BackendArtifactRecord = {
   artifact_id: string
   family: string

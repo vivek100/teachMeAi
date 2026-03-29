@@ -12,8 +12,10 @@ from backend.domain.models import (
     CanvasOpBatch,
     OrchestratorDecision,
 )
+from backend.logging_utils import get_logger
 from backend.streaming.publisher import EventPublisher
 
+logger = get_logger("artifacts.resolver")
 
 class ArtifactResolver:
     """Resolves an OrchestratorDecision into a CanvasOpBatch.
@@ -68,6 +70,14 @@ class ArtifactResolver:
             ))
             return None
 
+        logger.info(
+            "artifact selected | session_id=%s | artifact_id=%s | family=%s | query=%s",
+            session_id,
+            spec.artifact_id,
+            spec.family,
+            decision.artifact_query,
+        )
+
         await self._publisher.publish(BackendEvent(
             session_id=session_id,
             kind="artifact_selected",
@@ -98,6 +108,14 @@ class ArtifactResolver:
             },
         ))
 
+        logger.info(
+            "artifact instantiated | session_id=%s | batch_id=%s | artifact_id=%s | op_count=%s",
+            session_id,
+            batch.batch_id,
+            spec.artifact_id,
+            len(ops),
+        )
+
         return batch
 
     def _instantiate(
@@ -126,4 +144,3 @@ class ArtifactResolver:
             })
 
         return ops
-

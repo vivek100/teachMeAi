@@ -46,7 +46,7 @@ class Annotator:
             return None
 
         # Generate annotation ops — a callout text placed relative to the artifact
-        ops = self._build_annotation_ops(target, annotation_text)
+        ops = self._build_annotation_ops(target, annotation_text, state)
 
         batch = CanvasOpBatch(
             session_id=state.session_id,
@@ -97,32 +97,41 @@ class Annotator:
         # Fallback: return the most recent artifact
         return state.drawn_artifacts[-1]
 
+    def _count_existing_annotations(self, state: SessionState) -> int:
+        """Count how many annotation batches have already been created."""
+        return sum(1 for b in state.pending_batches if b.source == "annotation")
+
     def _build_annotation_ops(
         self,
         target: dict,
         annotation_text: str,
+        state: SessionState,
     ) -> list[dict]:
-        """Build annotation shapes — a highlighted callout note."""
-        # Count existing annotations to offset position
+        """Build annotation shapes — a highlighted callout note.
+
+        Each annotation is offset vertically so they don't stack on top of each other.
+        """
         annotation_id = f"shape:{uuid.uuid4().hex[:8]}"
         connector_id = f"shape:{uuid.uuid4().hex[:8]}"
+
+        # Offset each new annotation 100px lower than the previous one
+        annotation_index = self._count_existing_annotations(state)
+        y_offset = annotation_index * 100
+        base_x = 820
+        base_y = 20 + y_offset
 
         ops = [
             {
                 "op_type": "create_shape",
                 "shape": {
-                    "type": "geo",
-                    "x": 820,
-                    "y": 20,
+                    "type": "note",
+                    "x": base_x,
+                    "y": base_y,
                     "props": {
-                        "geo": "rectangle",
-                        "w": 300,
-                        "h": 80,
                         "text": annotation_text[:120],
                         "color": "yellow",
-                        "fill": "semi",
-                        "font": "sans",
                         "size": "s",
+                        "font": "sans",
                     },
                     "id": annotation_id,
                 },
@@ -131,8 +140,8 @@ class Annotator:
                 "op_type": "create_shape",
                 "shape": {
                     "type": "arrow",
-                    "x": 800,
-                    "y": 60,
+                    "x": base_x - 20,
+                    "y": base_y + 40,
                     "props": {
                         "start": {"x": 20, "y": 0},
                         "end": {"x": -20, "y": 0},

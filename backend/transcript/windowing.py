@@ -26,18 +26,24 @@ class WindowBuilder:
         self.min_new_chunks = min_new_chunks
         self.overlap = overlap
 
-    def has_ready_window(self, state: SessionState) -> bool:
-        """Check whether enough new chunks exist to form a window."""
+    def has_ready_window(self, state: SessionState, force: bool = False) -> bool:
+        """Check whether enough new chunks exist to form a window.
+
+        If *force* is True (e.g. for user_command sources), a single
+        unprocessed chunk is sufficient.
+        """
         unprocessed = len(state.transcript_chunks) - state.processed_cursor
+        if force:
+            return unprocessed >= 1
         return unprocessed >= self.min_new_chunks
 
-    async def build_window(self, state: SessionState) -> TranscriptWindow | None:
+    async def build_window(self, state: SessionState, force: bool = False) -> TranscriptWindow | None:
         """Build the next window if enough chunks are available.
 
         Advances the processed_cursor by (window_size - overlap) so
         subsequent windows overlap by `overlap` chunks.
         """
-        if not self.has_ready_window(state):
+        if not self.has_ready_window(state, force=force):
             return None
 
         total = len(state.transcript_chunks)

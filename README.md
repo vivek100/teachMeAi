@@ -170,17 +170,15 @@ frontend/
 
 ```bash
 # Backend
-cd backend
-pip install -r requirements.txt
-cp .env.example .env          # add OPENAI_API_KEY
-uvicorn backend.app:create_app --factory --reload
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+# edit backend/.env and add OPENAI_API_KEY (or another supported provider key)
+.\.venv\Scripts\python.exe -m uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000
 
 # Frontend
 cd frontend
 npm install
-npm run dev
+npm run dev -- --host=127.0.0.1 --port=5173
 
 # Tests
-python -m pytest backend/tests/test_integration.py -v --tb=short -s
+.\.venv\Scripts\python.exe -m pytest backend/tests/test_integration.py -v --tb=short -s
 ```
-

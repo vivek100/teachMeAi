@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Link2, Share2 } from 'lucide-react'
-import { Editor, Tldraw } from 'tldraw'
+import { Editor, Tldraw, toRichText } from 'tldraw'
 import type { CanvasBatch } from '../../runtime/types'
 
 export function CanvasPane({
@@ -177,6 +177,16 @@ function normalizeCreateShape(editor: Editor, shape: Record<string, unknown>, sh
 
   const pageId = editor.getCurrentPageId()
   const props = typeof shape.props === 'object' && shape.props ? { ...(shape.props as Record<string, unknown>) } : {}
+
+  // tldraw v4+ uses `richText` instead of `text` in shape props.
+  // Convert legacy `text` prop to `richText` for compatible shape types.
+  if ('text' in props && typeof props.text === 'string') {
+    const richTextTypes = new Set(['geo', 'text', 'note', 'arrow'])
+    if (richTextTypes.has(type)) {
+      props.richText = toRichText(props.text as string)
+      delete props.text
+    }
+  }
 
   return {
     ...shape,
